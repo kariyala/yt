@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Thumbnail Extractor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #0d0d0d;
+            --surface: #161616;
+            --surface2: #1e1e1e;
+            --border: rgba(255,255,255,0.08);
+            --accent: #ff0033;
+            --accent2: #ff6b35;
+            --text: #f0f0f0;
+            --text-muted: #888;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 40px 16px 80px;
+            overflow-x: hidden;
+        }
+
+        /* Background glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(255,0,51,0.12) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 560px;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(32px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .logo-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 14px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(255,0,51,0.3);
+            animation: pulse-logo 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-logo {
+            0%, 100% { box-shadow: 0 8px 32px rgba(255,0,51,0.3); }
+            50% { box-shadow: 0 8px 48px rgba(255,0,51,0.5); }
+        }
+
+        .logo-mark svg { width: 26px; height: 26px; fill: white; }
+
+        h1 {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(20px, 5vw, 26px);
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #fff 30%, #888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .tagline {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Input */
+        .input-group {
+            position: relative;
+        }
+
+        .input-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .input-wrap {
+            display: flex;
+            gap: 10px;
+            align-items: stretch;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            padding: 13px 16px;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        input[type="text"]::placeholder { color: var(--text-muted); }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255,0,51,0.12);
+        }
+
+        /* Primary button */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 13px 22px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.18s, box-shadow 0.18s, opacity 0.18s;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(255,0,51,0.25);
+        }
+
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,0,51,0.35); }
+        .btn-primary:active { transform: scale(0.97); }
+
+        /* Loading spinner on extract button */
+        .btn-primary.loading .btn-text { opacity: 0; }
+        .btn-primary.loading::after {
+            content: '';
+            position: absolute;
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        .btn-primary { position: relative; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Size selector */
+        .size-selector {
+            display: none;
+            gap: 8px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .size-selector.visible { display: flex; animation: fadeIn 0.3s ease; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .size-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .btn-size {
+            flex: 1;
+            min-width: 80px;
+            padding: 10px 12px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .btn-size:hover { border-color: var(--accent); color: var(--text); background: rgba(255,0,51,0.06); }
+        .btn-size.active { border-color: var(--accent); color: var(--accent); background: rgba(255,0,51,0.1); font-weight: 600; }
+
+        /* Clear button */
+        .btn-clear {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 14px;
+            padding: 13px 22px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.22s;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+        }
+
+        .btn-clear.visible {
+            display: inline-flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Center the clear button row */
+        .clear-wrap {
+            text-align: center;
+        }
+
+        .btn-clear:hover {
+            background: rgba(255, 0, 51, 0.07);
+            border-color: rgba(255, 0, 51, 0.35);
+            color: var(--accent);
+        }
+
+        .btn-clear:active { transform: scale(0.98); }
+        .btn-clear .material-icons-round { font-size: 15px; }
+
+        /* Result card */
+        .result-card {
+            display: none;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            animation: fadeIn 0.4s cubic-bezier(0.22,1,0.36,1);
+        }
+
+        .result-card.visible { display: block; }
+
+        /* Thumbnail area */
+        .thumb-area {
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .thumb-area img {
+            width: 100%;
+            height: auto;
+            display: block;
+            transition: opacity 0.3s, transform 0.4s;
+            opacity: 0;
+            transform: scale(1.02);
+        }
+
+        .thumb-area img.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Shimmer loader */
+        .thumb-shimmer {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, var(--surface2) 25%, rgba(255,255,255,0.04) 50%, var(--surface2) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+        }
+
+        .thumb-shimmer.hidden { display: none; }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .thumb-shimmer-icon { opacity: 0.15; }
+        .thumb-shimmer-icon svg { width: 48px; height: 48px; fill: var(--text); }
+
+        /* Thumbnail label badge */
+        .thumb-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 0.3s 0.2s;
+        }
+
+        .thumb-badge.visible { opacity: 1; }
+
+        /* URL row */
+        .url-row {
+            padding: 14px 18px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .url-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        /* Action buttons */
+        .actions {
+            padding: 16px 18px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 16px;
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            background: var(--surface2);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            justify-content: center;
+            min-width: 80px;
+        }
+
+        .btn-action:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); transform: translateY(-1px); }
+        .btn-action:active { transform: scale(0.97); }
+
+        .btn-action .material-icons-round { font-size: 15px; }
+
+        /* Specific action colors on hover */
+        #copyButton:hover { border-color: #4ade80; color: #4ade80; }
+        #openButton:hover { border-color: #60a5fa; color: #60a5fa; }
+        #shareButton:hover { border-color: #c084fc; color: #c084fc; }
+        #downloadButton:hover { border-color: var(--accent2); color: var(--accent2); }
+
+        /* Download ripple / active state */
+        #downloadButton.downloading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Copy toast */
+        .copy-toast {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #4ade80;
+            color: #000;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+            pointer-events: none;
+            animation: toastIn 0.2s ease;
+        }
+
+        .copy-toast.show { display: block; }
+
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+            to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        /* Mobile */
+        @media (max-width: 480px) {
+            body { padding: 24px 12px 60px; }
+            .card { padding: 20px; }
+            .input-wrap { flex-direction: column; }
+            .btn-primary { width: 100%; }
+            .btn-action { font-size: 12px; padding: 9px 12px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Thumbnail Extractor</h1>
+        <p class="tagline">Extract high-quality YouTube thumbnails instantly</p>
+    </div>
+
+    <!-- Input card -->
+    <div class="card">
+        <span class="input-label">YouTube URL</span>
+        <div class="input-wrap">
+            <input type="text" id="youtubeUrl" placeholder="Paste a YouTube link…">
+            <button class="btn-primary" id="extractButton">
+                <span class="btn-text">Extract</span>
+            </button>
+        </div>
+
+        <!-- Size buttons -->
+        <div class="size-selector" id="sizeButtons">
+            <span class="size-label">Resolution</span>
+            <button class="btn-size" id="btnLow" onclick="showThumbnail('high')">Low · 360p</button>
+            <button class="btn-size" id="btnSd" onclick="showThumbnail('sd')">SD · 480p</button>
+            <button class="btn-size" id="btnHd" onclick="showThumbnail('hd')">HD · 720p</button>
+        </div>
+
+        <!-- Clear / Reset button -->
+        <div class="clear-wrap">
+            <button class="btn-clear" id="clearButton">
+                <span class="material-icons-round">restart_alt</span> Clear
+            </button>
+        </div>
+    </div>
+
+    <!-- Result card -->
+    <div class="result-card" id="result">
+        <div class="thumb-area">
+            <div class="thumb-shimmer" id="thumbShimmer">
+                <div class="thumb-shimmer-icon">
+                    <svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                </div>
+            </div>
+            <img id="thumbnailImg" src="" alt="YouTube Thumbnail">
+            <div class="thumb-badge" id="thumbBadge"></div>
+        </div>
+
+        <div class="url-row">
+            <p class="url-text" id="thumbnailUrl"></p>
+        </div>
+
+        <div class="actions">
+            <button class="btn-action" id="copyButton">
+                <span class="material-icons-round">content_copy</span> Copy
+            </button>
+            <button class="btn-action" id="openButton">
+                <span class="material-icons-round">open_in_new</span> Open
+            </button>
+            <button class="btn-action" id="downloadButton">
+                <span class="material-icons-round">download</span> Download
+            </button>
+            <button class="btn-action" id="shareButton">
+                <span class="material-icons-round">share</span> Share
+            </button>
+            <div class="copy-toast" id="copyMessage">Copied!</div>
+        </div>
+    </div>
+
+    <div class="footer">Works with videos, shorts &amp; embeds</div>
+</div>
+
+<script>
+    document.getElementById('extractButton').addEventListener('click', extractThumbnail);
+    document.getElementById('youtubeUrl').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') extractThumbnail();
+    });
+    document.getElementById('clearButton').addEventListener('click', resetAll);
+
+    function resetAll() {
+        // Clear input
+        document.getElementById('youtubeUrl').value = '';
+
+        // Hide result card
+        const result = document.getElementById('result');
+        result.style.transition = 'opacity 0.3s, transform 0.3s';
+        result.style.opacity = '0';
+        result.style.transform = 'translateY(8px)';
+        setTimeout(() => {
+            result.classList.remove('visible');
+            result.style.opacity = '';
+            result.style.transform = '';
+            result.style.transition = '';
+        }, 300);
+
+        // Hide size buttons
+        document.getElementById('sizeButtons').classList.remove('visible');
+
+        // Hide clear button
+        document.getElementById('clearButton').classList.remove('visible');
+
+        // Reset image state
+        const img = document.getElementById('thumbnailImg');
+        img.src = '';
+        img.classList.remove('loaded');
+        document.getElementById('thumbShimmer').classList.remove('hidden');
+        document.getElementById('thumbBadge').classList.remove('visible');
+        document.getElementById('thumbnailUrl').textContent = '';
+
+        // Reset size active state
+        ['btnLow','btnSd','btnHd'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+
+        // Clear stored state
+        window.sizes = null;
+        window.currentVideoId = null;
+
+        // Focus input
+        setTimeout(() => document.getElementById('youtubeUrl').focus(), 320);
+    }
+
+    function extractThumbnail() {
+        const url = document.getElementById('youtubeUrl').value.trim();
+        const videoId = extractVideoId(url);
+
+        if (videoId) {
+            const btn = document.getElementById('extractButton');
+            btn.classList.add('loading');
+
+            const isShort = url.includes("shorts/");
+            const sizes = {
+                high: {
+                    url: isShort ? `https://i.ytimg.com/vi/${videoId}/oardefault.jpg` : `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+                    label: isShort ? 'Shorts Thumbnail' : 'Low Quality · 480×360'
+                },
+                sd: {
+                    url: `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`,
+                    label: 'Standard Quality · 640×480'
+                },
+                hd: {
+                    url: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+                    label: 'High Quality · 1280×720'
+                }
+            };
+
+            window.sizes = sizes;
+            window.currentVideoId = videoId;
+
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                if (isShort) {
+                    document.getElementById('sizeButtons').classList.remove('visible');
+                    showThumbnail('high');
+                } else {
+                    const sb = document.getElementById('sizeButtons');
+                    sb.classList.add('visible');
+                    setActiveSize('btnLow');
+                    showThumbnail('high');
+                }
+            }, 600);
+        } else {
+            shakeInput();
+        }
+    }
+
+    function shakeInput() {
+        const inp = document.getElementById('youtubeUrl');
+        inp.style.borderColor = 'var(--accent)';
+        inp.style.animation = 'shake 0.4s ease';
+        inp.addEventListener('animationend', () => {
+            inp.style.animation = '';
+            inp.style.borderColor = '';
+        }, { once: true });
+    }
+
+    // Add shake keyframe dynamically
+    const shakeStyle = document.createElement('style');
+    shakeStyle.textContent = `@keyframes shake {
+        0%,100%{transform:translateX(0)}
+        20%{transform:translateX(-8px)}
+        40%{transform:translateX(8px)}
+        60%{transform:translateX(-6px)}
+        80%{transform:translateX(6px)}
+    }`;
+    document.head.appendChild(shakeStyle);
+
+    function extractVideoId(url) {
+        const patterns = [
+            /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^\?&]+)/,
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^\?&]+)/,
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^\?&]+)/,
+            /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([^\?&]+)/
+        ];
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match && match[1]) return match[1];
+        }
+        return null;
+    }
+
+    function setActiveSize(activeId) {
+        ['btnLow','btnSd','btnHd'].forEach(id => {
+            document.getElementById(id).classList.toggle('active', id === activeId);
+        });
+    }
+
+    // Map size key to button id
+    const sizeToBtn = { high: 'btnLow', sd: 'btnSd', hd: 'btnHd' };
+
+    function showThumbnail(size) {
+        const thumbnail = window.sizes[size];
+        if (sizeToBtn[size]) setActiveSize(sizeToBtn[size]);
+        showSingleThumbnail(thumbnail.url, thumbnail.label);
+    }
+
+    function showSingleThumbnail(url, label) {
+        const img = document.getElementById('thumbnailImg');
+        const shimmer = document.getElementById('thumbShimmer');
+        const badge = document.getElementById('thumbBadge');
+
+        // Reset
+        img.classList.remove('loaded');
+        shimmer.classList.remove('hidden');
+        badge.classList.remove('visible');
+        img.src = '';
+
+        document.getElementById('thumbnailUrl').textContent = url;
+        document.getElementById('result').classList.add('visible');
+        document.getElementById('clearButton').classList.add('visible');
+
+        // Load image
+        const tempImg = new Image();
+        tempImg.crossOrigin = 'anonymous';
+        tempImg.onload = () => {
+            img.src = url;
+            img.crossOrigin = 'anonymous';
+            shimmer.classList.add('hidden');
+            requestAnimationFrame(() => {
+                img.classList.add('loaded');
+                badge.textContent = label;
+                badge.classList.add('visible');
+            });
+        };
+        tempImg.onerror = () => {
+            shimmer.classList.add('hidden');
+            img.src = url;
+            img.classList.add('loaded');
+            badge.textContent = label;
+            badge.classList.add('visible');
+        };
+        tempImg.src = url;
+
+        // Wire buttons
+        document.getElementById('copyButton').onclick = () => copyToClipboard(url);
+        document.getElementById('openButton').onclick = () => window.open(url, '_blank');
+        document.getElementById('shareButton').onclick = () => shareThumbnail(url);
+        document.getElementById('downloadButton').onclick = () => downloadThumbnail(url, label);
+    }
+
+    function copyToClipboard(text) {
+        const copyFn = () => {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.cssText = 'position:fixed;opacity:0;';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                return Promise.resolve();
+            }
+        };
+
+        copyFn().then(() => {
+            const toast = document.getElementById('copyMessage');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1800);
+        }).catch(() => {});
+    }
+
+    function downloadThumbnail(url, label) {
+        const btn = document.getElementById('downloadButton');
+        btn.classList.add('downloading');
+
+        // Try fetch + blob for cross-origin download (works on most browsers)
+        fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error('fetch failed');
+                return res.blob();
+            })
+            .then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `thumbnail_${window.currentVideoId || 'youtube'}.jpg`;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    URL.revokeObjectURL(a.href);
+                    document.body.removeChild(a);
+                }, 1000);
+            })
+            .catch(() => {
+                // Fallback: open in new tab (user can save from there)
+                window.open(url, '_blank');
+            })
+            .finally(() => {
+                setTimeout(() => btn.classList.remove('downloading'), 800);
+            });
+    }
+
+    function shareThumbnail(url) {
+        if (navigator.share) {
+            navigator.share({ title: 'YouTube Thumbnail', url }).catch(console.error);
+        } else {
+            alert('Web share is not supported in your browser.');
+        }
+    }
+</script>
+</body>
+</html>
