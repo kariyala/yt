@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube Timestamp</title>
+<link rel="icon" type="image/png" href="video.png">
+
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;700&display=swap');
+
+/* ---------- THEME ---------- */
+:root{
+  --bg:#0b0f14;
+  --card:#111826;
+  --border:rgba(255,255,255,.10);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.65);
+  --input-bg:rgba(255,255,255,.06);
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+  --green:#00c26a;
+  --red:#ff3b3b;
+}
+
+body.light{
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --border:rgba(0,0,0,.12);
+  --text:rgba(0,0,0,.88);
+  --muted:rgba(0,0,0,.55);
+  --input-bg:rgba(0,0,0,.04);
+  --shadow:0 14px 40px rgba(0,0,0,.10);
+  --green:#00693C;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  display:grid;
+  place-items:center;
+  padding:18px;
+  font-family:'Google Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+/* ---------- CARD ---------- */
+.container{
+  width:min(560px,100%);
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow:var(--shadow);
+  padding:20px;
+}
+
+/* ---------- HEADER ---------- */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:26px;
+}
+h2{margin:0;font-size:26px;font-weight:700}
+
+/* ---------- TOGGLE ---------- */
+.mode-toggle{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 10px;
+  border:1px solid var(--border);
+  border-radius:999px;
+  cursor:pointer;
+}
+.mode-toggle span{font-size:13px;font-weight:700;color:var(--muted)}
+.switch{
+  width:40px;height:22px;border-radius:999px;
+  border:1px solid var(--border);position:relative
+}
+.knob{
+  position:absolute;top:50%;left:3px;
+  transform:translateY(-50%);
+  width:16px;height:16px;border-radius:50%;
+  background:var(--text);transition:left .2s
+}
+body.light .knob{left:21px}
+
+/* ---------- INPUTS ---------- */
+.input-group{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin-bottom:26px;
+}
+label{font-size:16px;font-weight:700;color:var(--muted)}
+label::after{content:" :"}
+input{
+  padding:11px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:var(--input-bg);
+  color:var(--text);
+  font-size:15px;
+}
+#url{font-weight:400}
+
+/* ---------- TIME ---------- */
+.time-row{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  margin-bottom:30px;
+}
+.time-row .input-group{width:120px;margin-bottom:0}
+.time-row input{text-align:center;font-weight:700}
+
+/* ---------- BUTTONS ---------- */
+button{
+  font-family:'Google Sans',sans-serif;
+  font-size:15px;
+  font-weight:700;
+  border-radius:999px;
+  padding:11px 16px;
+  border:1px solid var(--border);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:.2s;
+}
+
+.generate-btn{
+  background:linear-gradient(135deg,var(--green),#00a85c);
+  color:white;
+}
+.generate-btn:hover{
+  transform:translateY(-1px);
+  box-shadow:0 6px 20px rgba(0,194,106,.45);
+}
+
+/* ---------- RESULT ---------- */
+.result-container{
+  min-height:46px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:rgba(255,255,255,.03);
+  font-weight:700;
+  word-break:break-all;
+}
+.result-fade{animation:fade .5s}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+
+/* ---------- COPY / OPEN ---------- */
+.action-row{
+  display:flex;
+  gap:14px;
+  margin:30px 0;
+}
+.copy-btn,.open-btn{
+  flex:1;
+  background:rgba(255,255,255,.05);
+  color:var(--muted);
+  justify-content:center;
+}
+.copy-btn span,.open-btn span{color:var(--muted)}
+.copy-btn:hover,.open-btn:hover{
+  background:var(--green);
+  color:#06110a;
+}
+.copy-btn:hover span,.open-btn:hover span{color:#06110a}
+
+/* ---------- COPIED ---------- */
+.message{
+  text-align:center;
+  font-weight:700;
+  color:var(--green);
+  margin:16px 0;
+  opacity:0;
+}
+.message.show{animation:msg 2s}
+@keyframes msg{
+  0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}
+}
+
+/* ---------- SHARE ---------- */
+.share-label{font-weight:700;margin-bottom:12px}
+.share-label::after{content:" :"}
+.share-icons{
+  display:flex;
+  justify-content:space-around;
+  margin-bottom:26px;
+}
+.share-icons img{
+  width:36px;
+  cursor:pointer;
+}
+.share-icons img:hover{animation:shake 2s}
+@keyframes shake{
+  0%{transform:translateX(0)}
+  10%{transform:translateX(-3px)}
+  20%{transform:translateX(3px)}
+  30%{transform:translateX(-3px)}
+  40%{transform:translateX(3px)}
+  100%{transform:translateX(0)}
+}
+
+/* ---------- CLEAR ---------- */
+.clear-wrap{display:flex;justify-content:center}
+.clear-btn{
+  background:rgba(255,59,59,.15);
+  color:var(--red);
+  border-color:rgba(255,59,59,.35);
+}
+.clear-btn:hover{background:var(--red);color:white}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="topbar">
+  <h2>YouTube Timestamp Generator</h2>
+  <div class="mode-toggle" id="toggle">
+    <span id="modeText">Dark</span>
+    <div class="switch"><div class="knob"></div></div>
+  </div>
+</div>
+
+<div class="input-group">
+<label>YouTube URL</label>
+<input id="url">
+</div>
+
+<div class="time-row">
+  <div class="input-group"><label>Hours</label><input id="h" type="number"></div>
+  <div class="input-group"><label>Minutes</label><input id="m" type="number"></div>
+  <div class="input-group"><label>Seconds</label><input id="s" type="number"></div>
+</div>
+
+<div style="display:flex;justify-content:center">
+<button class="generate-btn" onclick="gen()">Generate</button>
+</div>
+
+<div class="input-group" style="margin-top:26px">
+<label>Result</label>
+<div class="result-container" id="result"></div>
+</div>
+
+<div class="action-row">
+<button class="copy-btn" onclick="copyLink()">
+<span class="material-icons">content_copy</span>Copy
+</button>
+<button class="open-btn" onclick="openLink()">
+<span class="material-icons">open_in_new</span>Open
+</button>
+</div>
+
+<div class="message" id="msg">Copied</div>
+
+<div class="share-label">Share to</div>
+<div class="share-icons">
+<img src="https://i.ibb.co/GWHjY7M/whatsapp-8704827.png" onclick="shareWhatsApp()">
+<img src="https://i.ibb.co/VB99t1B/Gmail-icon.png" onclick="shareEmail()">
+<img src="https://upload.wikimedia.org/wikipedia/commons/8/83/Telegram_2019_Logo.svg" onclick="shareTelegram()">
+<img src="https://i.ibb.co/cJJtkrx/share-it.png" onclick="shareMore()">
+</div>
+
+<div class="clear-wrap">
+<button class="clear-btn" onclick="clearAll()">Clear</button>
+</div>
+
+</div>
+
+<script>
+function extractVideoId(u){
+  return u.searchParams.get("v") || u.pathname.split("/").pop();
+}
+
+function gen(){
+  try{
+    const u=new URL(url.value.trim());
+    const t=(+h.value||0)*3600+(+m.value||0)*60+(+s.value||0);
+    const vid=extractVideoId(u);
+
+    if(!vid) throw 0;
+
+    const isMusic=u.hostname.includes("music.youtube.com");
+
+    result.innerText=isMusic
+      ? `https://music.youtube.com/watch?v=${vid}&t=${t}`
+      : `https://youtu.be/${vid}?t=${t}`;
+
+    result.classList.remove("result-fade");
+    void result.offsetWidth;
+    result.classList.add("result-fade");
+  }catch{
+    result.innerText="Invalid URL";
+  }
+}
+
+function getLink(){
+  if(!result.innerText || result.innerText==="Invalid URL") return null;
+  return result.innerText;
+}
+
+function copyLink(){
+  const l=getLink(); if(!l) return;
+  navigator.clipboard.writeText(l);
+  msg.classList.remove("show");
+  void msg.offsetWidth;
+  msg.classList.add("show");
+}
+
+function openLink(){
+  const l=getLink(); if(l) window.open(l,"_blank");
+}
+
+/* ---------- SHARE ---------- */
+function shareWhatsApp(){
+  const l=getLink(); if(!l) return;
+  location.href=`whatsapp://send?text=${encodeURIComponent(l)}`;
+}
+function shareTelegram(){
+  const l=getLink(); if(!l) return;
+  location.href=`tg://msg_url?url=${encodeURIComponent(l)}`;
+}
+function shareEmail(){
+  const l=getLink(); if(!l) return;
+  location.href=`mailto:?body=${encodeURIComponent(l)}`;
+}
+function shareMore(){
+  const l=getLink(); if(!l) return;
+  if(navigator.share) navigator.share({url:l});
+}
+
+/* ---------- CLEAR ---------- */
+function clearAll(){
+  url.value=h.value=m.value=s.value="";
+  result.innerText="";
+  msg.classList.remove("show");
+}
+
+/* ---------- KEYBOARD ---------- */
+document.addEventListener("keydown",e=>{
+  if(document.activeElement.tagName==="INPUT") return;
+  if(e.key.toLowerCase()==="g") gen();
+  if(e.key.toLowerCase()==="c") clearAll();
+});
+
+/* ---------- THEME ---------- */
+const toggle=document.getElementById("toggle");
+const modeText=document.getElementById("modeText");
+function setMode(l){
+  document.body.classList.toggle("light",l);
+  modeText.innerText=l?"Light":"Dark";
+  localStorage.setItem("yt_mode",l?"light":"dark");
+}
+setMode(localStorage.getItem("yt_mode")==="light");
+toggle.onclick=()=>setMode(!document.body.classList.contains("light"));
+</script>
+
+</body>
+</html>
